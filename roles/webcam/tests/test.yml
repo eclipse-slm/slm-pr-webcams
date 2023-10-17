@@ -1,0 +1,7 @@
+---
+- name: Test webcam role
+  hosts: all
+  gather_facts: yes
+  become: yes
+  roles:
+    - ../../webcam

@@ -1,0 +1,30 @@
+---
+- name: Init submodel_element_collection and value fact
+  ansible.builtin.set_fact:
+    submodel_element_collection: {}
+    value: []
+
+- name: Set Values of Submodel Element Collection
+  ansible.builtin.set_fact:
+    value: "{{ value + [{ 'idShort': (webcam_meta.key | replace('.', '')), 'modelType': { 'name': 'Property' }, 'valueType': 'string', 'value': webcam_meta.value }] }}"
+  loop: "{{ item | dict2items }}"
+  loop_control:
+    loop_var: webcam_meta
+
+- name: Set Submodel Element Collection variable
+  ansible.builtin.set_fact:
+    submodel_element_collection:
+      idShort: "webcam-{{item.path | split('/') | last}}"
+      modelType:
+        name: SubmodelElementCollection
+      value: "{{ value }}"
+
+- name: Create Webcam Submodel Element Collection
+  ansible.builtin.uri:
+    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}/aas/submodels/{{aas_submodel.idShort}}/submodel/submodelElements/{{ submodel_element_collection.idShort }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+    body_format: json
+    body: "{{ submodel_element_collection }}"
+  delegate_to: localhost

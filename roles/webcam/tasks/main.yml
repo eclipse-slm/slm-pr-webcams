@@ -1,0 +1,58 @@
+---
+# tasks file for webcam
+- name: Get Video Devices
+  shell: "find /dev/video*"
+  ignore_errors: true
+  register: cmd_find
+
+- name: Lookup camera infos
+  when: cmd_find.rc == 0
+  block:
+    - name: Install v4l-utils - Ubuntu
+      when: ansible_distribution == 'Ubuntu'
+      ansible.builtin.apt:
+        pkg:
+          - v4l-utils
+        update_cache: yes
+      register: apt_result
+      retries: 100
+      delay: 10
+      until: apt_result.rc is not defined
+
+
+    - name: Set Video Device paths
+      ansible.builtin.set_fact:
+        video_device_paths: "{{ cmd_find.stdout_lines }}"
+
+    - name: Filter Video Device paths by webcams
+      ansible.builtin.include_tasks: filter_device_paths.yml
+      loop: "{{ video_device_paths }}"
+
+    - name: Get USB Camera Meta info
+      ansible.builtin.include_tasks: get_usb_camera_meta_info.yml
+      loop: "{{ webcam_device_paths }}"
+      when:
+          - webcam_device_paths is defined
+          - webcam_device_paths | length > 0
+
+    - name: Print webcams list
+      ansible.builtin.debug:
+        var: webcams
+
+- name: Create Submodel Descriptor at Registry and AAS/Submodel at Server
+  when:
+    - webcams is defined
+    - webcams | length > 0
+  block:
+    - name: Register Submodel Descriptor at registry
+      ansible.builtin.include_tasks: helper/register_submodel_registry.yml
+
+    - name: Register AAS/Submodel at server
+      ansible.builtin.include_tasks: register_aas.yml
+
+
+- name: Delete Submodel
+  ansible.builtin.include_tasks: deregister_submodel.yml
+  when: (webcams is not defined) or (webcams | length == 0)
+
+

@@ -1,0 +1,27 @@
+---
+- name: Add Webcam host to inventory
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Add webcam host
+      ansible.builtin.add_host:
+        name: "{{ lookup('env', 'SCENARIO_LOCAL_HOSTNAME') }}"
+        groups: webcam-hosts
+        ansible_user: "{{ lookup('env', 'SCENARIO_LOCAL_USERNAME') }}"
+        ansible_password: "{{ lookup('env', 'SCENARIO_LOCAL_PASSWORD') }}"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking\=no -o ServerAliveInterval=10'
+
+- name: Converge
+  hosts: webcam-hosts
+  gather_facts: yes
+  become: no
+  tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: ../default/vars.yml
+
+    - name: Include ansible-facts role
+      ansible.builtin.include_role:
+        name: webcam

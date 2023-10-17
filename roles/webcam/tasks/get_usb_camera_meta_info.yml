@@ -1,0 +1,67 @@
+---
+- ansible.builtin.set_fact:
+    webcam_path: "{{ item }}"
+
+- name: Get model info from v4l2-ctl (Model)
+  shell: "v4l2-ctl --device={{ webcam_path }} --all | grep Model"
+  register: cmd_v2l2_ctl_model_raw
+  ignore_errors: true
+
+- ansible.builtin.set_fact:
+    webcam_model: "{{ (cmd_v2l2_ctl_model_raw.stdout | split(':') | last | trim) | default('') }}"
+
+- name: Get model info from v4l2-ctl (Card Type)
+  when: webcam_model | length == 0
+  block:
+    - name: Get model info from v4l2-ctl (Card Type)
+      shell: "v4l2-ctl --device={{ webcam_path }} --all | grep Card"
+      register: cmd_v2l2_ctl_model_raw
+
+    - ansible.builtin.set_fact:
+        webcam_model: "{{ (cmd_v2l2_ctl_model_raw.stdout | split(':') | last | trim) | default('') }}"
+
+- name: Run usb-devices
+  command: usb-devices
+  register: cmd_usb_devices
+
+- name: Get USB Devices
+  ansible.builtin.set_fact:
+    usb_devices : "{{ cmd_usb_devices.stdout | split('T:') }}"
+
+- name: Identify USB Device
+  ansible.builtin.set_fact:
+    usb_device: "{{ device }}"
+  when:
+    - webcam_model | length != 0
+    - "webcam_model in device"
+  loop: "{{usb_devices}}"
+  loop_control:
+    loop_var: device
+
+- name: Get Vendor ID
+  ansible.builtin.set_fact:
+    vendor_id: "{{ usb_device_info | split('=') | last }}"
+  loop: "{{ usb_device | split(' ') }}"
+  loop_control:
+    loop_var: usb_device_info
+  when: "'Vendor' in usb_device_info"
+
+- name: Get Prod ID
+  ansible.builtin.set_fact:
+    prod_id: "{{ usb_device_info | split('=') | last }}"
+  loop: "{{usb_device | split(' ')}}"
+  loop_control:
+    loop_var: usb_device_info
+  when: "'ProdID' in usb_device_info"
+
+- name: "Get lsusb entry of '{{vendor_id}}:{{prod_id}}'"
+  command: "lsusb -d {{vendor_id}}:{{prod_id}}"
+  register: cmd_lsusb
+
+- name: Set vendor
+  ansible.builtin.set_fact:
+    vendor: "{{ cmd_lsusb.stdout | split(vendor_id+':'+prod_id) | last | trim }}"
+
+- name: Add webcam info to result list
+  ansible.builtin.set_fact:
+    webcams: "{{ webcams | default([]) + [{ 'path': webcam_path, 'model': webcam_model, 'prod_id': prod_id, 'vendor_id': vendor_id, 'vendor': vendor }] }}"

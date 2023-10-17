@@ -1,0 +1,51 @@
+---
+- name: Init Variables
+  ansible.builtin.set_fact:
+    index_device_caps: 0
+    index_meta_driver_info: 0
+    device_caps: []
+
+- name: Get Video Device Info
+  command: "v4l2-ctl --device={{ item }} --info"
+  register: cmd_v2l2_ctl
+
+- name: Init Index of 'Device Caps' and 'Media Driver Info'
+  ansible.builtin.set_fact:
+    index_device_caps: 0
+    index_meta_driver_info: "{{ cmd_v2l2_ctl.stdout_lines | length }}"
+
+- name: Get Index of 'Device Caps'
+  ansible.builtin.set_fact:
+    index_device_caps: "{{ index }}"
+  loop: "{{ cmd_v2l2_ctl.stdout_lines }}"
+  loop_control:
+    index_var: index
+    loop_var: cmd_out_line
+  when: "'Device Caps' in cmd_out_line"
+
+- name: Get Index of 'Meta Driver Info'
+  ansible.builtin.set_fact:
+    index_meta_driver_info: "{{ index }}"
+  loop: "{{ cmd_v2l2_ctl.stdout_lines }}"
+  loop_control:
+    index_var: index
+    loop_var: cmd_out_line
+  when: "'Media Driver Info' in cmd_out_line"
+
+- name: Write Device Caps to array
+  ansible.builtin.set_fact:
+    device_caps: "{{ device_caps | default([]) + [cmd_out_line | replace('\t', '')] }}"
+  loop: "{{ cmd_v2l2_ctl.stdout_lines}}"
+  loop_control:
+    index_var: index
+    loop_var: cmd_out_line
+  when:
+    - index > index_device_caps
+    - index < (index_meta_driver_info  | int)
+
+- name: Add Video Device path to Webcam path array
+  ansible.builtin.set_fact:
+    webcam_device_paths: "{{ webcam_device_paths | default([]) + [item] }}"
+  when:
+    - "'Video Capture' in device_caps"
+    - "'uvcvideo' in cmd_v2l2_ctl.stdout"

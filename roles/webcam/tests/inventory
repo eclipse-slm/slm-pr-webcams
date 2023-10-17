@@ -1,0 +1,2 @@
+<ip-address> ansible_user=<username> ansible_password=<password> ansible_become_password=<password> ansible_ssh_common_args='-o StrictHostKeyChecking\=no -o ServerAliveInterval=10'
+

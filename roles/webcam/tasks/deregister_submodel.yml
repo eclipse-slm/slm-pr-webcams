@@ -1,0 +1,6 @@
+---
+- name: Delete Webcams Submodel
+  ansible.builtin.uri:
+    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}/aas/submodels/{{aas_submodel.idShort}}"
+    method: DELETE
+  delegate_to: localhost

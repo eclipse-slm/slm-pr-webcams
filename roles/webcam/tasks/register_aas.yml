@@ -1,0 +1,56 @@
+---
+- name: Check input parameter
+  ansible.builtin.assert:
+    that:
+      - (aas_id is defined) and (aas_id | length > 0)
+
+- name: Create AAS
+  ansible.builtin.uri:
+    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+    body_format: json
+    body: "{{ aas }}"
+  register: create_aas_request
+  when: force_create_ass | default(false)
+  delegate_to: localhost
+
+- name: Create Webcams Submodel
+  ansible.builtin.uri:
+    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}/aas/submodels/{{aas_submodel.idShort}}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+    body_format: json
+    body: "{{ aas_submodel }}"
+  delegate_to: localhost
+
+- name: Create Submodel Element "webcam-type"
+  ansible.builtin.uri:
+    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}/aas/submodels/{{aas_submodel.idShort}}/submodel/submodelElements/{{ id_short }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+    body_format: json
+    body:
+      idShort: "{{ id_short }}"
+      modelType:
+        name: "Property"
+      valueType: "string"
+      value: "{{ value }}"
+      kind: Instance
+      semanticId:
+        keys:
+          - type: ConceptDescription
+            local: false
+            value: "https://fab-os.org/webcam-types"
+            idType: "IRDI"
+  vars:
+    id_short: "webcam-type"
+    value: "usb-camera"
+  delegate_to: localhost
+
+- name: Create Submodel Element Collections
+  ansible.builtin.include_tasks: register_submodel_element_collection.yml
+  loop: "{{ webcams }}"

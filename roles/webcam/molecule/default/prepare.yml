@@ -1,0 +1,15 @@
+---
+- name: Prepare
+  hosts: aas-server
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: "Include basyx_server - state = present"
+      ansible.builtin.include_role:
+        name: "basyx_server"
+
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: vars.yml
+
+
