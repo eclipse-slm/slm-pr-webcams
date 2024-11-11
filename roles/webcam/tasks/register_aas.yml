@@ -5,35 +5,32 @@
       - (aas_id is defined) and (aas_id | length > 0)
 
 - name: Create AAS
-  ansible.builtin.uri:
-    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}"
-    method: PUT
-    headers:
-      Content-Type: application/json
-    body_format: json
-    body: "{{ aas }}"
+  slm.aas.aas:
+    scheme: http
+    host: "{{ aas_repository_host }}"
+    port: "{{ aas_repository_port }}"
+    shell: "{{ aas }}"
   register: create_aas_request
   when: force_create_ass | default(false)
   delegate_to: localhost
 
 - name: Create Webcams Submodel
-  ansible.builtin.uri:
-    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}/aas/submodels/{{aas_submodel.idShort}}"
-    method: PUT
-    headers:
-      Content-Type: application/json
-    body_format: json
-    body: "{{ aas_submodel }}"
+  slm.aas.submodel:
+    scheme: http
+    host: "{{ aas_repository_host }}"
+    port: "{{ aas_repository_port }}"
+    submodel: "{{ aas_submodel }}"
+    force: true
   delegate_to: localhost
 
-- name: Create Submodel Element "webcam-type"
-  ansible.builtin.uri:
-    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}/aas/submodels/{{aas_submodel.idShort}}/submodel/submodelElements/{{ id_short }}"
-    method: PUT
-    headers:
-      Content-Type: application/json
-    body_format: json
-    body:
+- name: Set Vars
+  ansible.builtin.set_fact:
+    id_short: "webcam-type"
+    value: "usb-camera"
+
+- name: Define Submodel Element "webcam-type"
+  ansible.builtin.set_fact:
+    webcam_type:
       idShort: "{{ id_short }}"
       modelType:
         name: "Property"
@@ -46,9 +43,14 @@
             local: false
             value: "https://fab-os.org/webcam-types"
             idType: "IRDI"
-  vars:
-    id_short: "webcam-type"
-    value: "usb-camera"
+
+- name: Create Submodel Element "webcam-type"
+  slm.aas.submodel:
+    scheme: http
+    host: "{{ aas_repository_host }}"
+    port: "{{ aas_repository_port }}"
+    submodel: "{{ webcam_type }}"
+    id: "{{ webcam_type.idShort }}"
   delegate_to: localhost
 
 - name: Create Submodel Element Collections
