@@ -19,12 +19,11 @@
         name: SubmodelElementCollection
       value: "{{ value }}"
 
-- name: Create Webcam Submodel Element Collection
-  ansible.builtin.uri:
-    url: "{{ aas_server_base_url }}/shells/{{ aas_id }}/aas/submodels/{{aas_submodel.idShort}}/submodel/submodelElements/{{ submodel_element_collection.idShort }}"
-    method: PUT
-    headers:
-      Content-Type: application/json
-    body_format: json
-    body: "{{ submodel_element_collection }}"
+- name: Create Submodel Element "webcam-type"
+  slm.aas.submodel:
+    scheme: http
+    host: "{{ aas_repository_host }}"
+    port: "{{ aas_repository_port }}"
+    submodel: "{{ submodel_element_collection }}"
+    id: "{{ submodel_element_collection.idShort }}"
   delegate_to: localhost
